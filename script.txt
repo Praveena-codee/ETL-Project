@@ -1,0 +1,113 @@
+import pandas as pd
+from sqlalchemy import create_engine
+
+#Store INDUSTRY CSV into DataFrame
+csv_file = "Resources/industry_employment.csv"
+industry_data_df = pd.read_csv(csv_file)
+industry_data_df.head()
+
+##  Rename the column headers
+industry_data_df = industry_data_df.rename(columns={"Annual industry employment movements, 2016-17 to 2018-19": "industry",
+                                                          "Unnamed: 1": "y_2017",
+                                                          "Unnamed: 2": "y_2018",
+                                                          "Unnamed: 3": "y_2019"})
+industry_data_df = industry_data_df.rename(columns={"Industry": "industry"})
+## Clean the data
+industry_clean_df=industry_data_df.dropna(how='any')
+industry_clean_df.head()
+
+
+
+
+# dropping duplicates and setting the index
+#industry_data_df.drop_duplicates("Industry", inplace=True)
+industry_clean_df.set_index("industry", inplace=True)
+
+industry_clean_df.head()
+
+
+
+
+
+#Store EMPLOYMENT CSV into DataFrame
+csv_file = "Resources/Industry_EBITDA.csv"
+earnings_data_df = pd.read_csv(csv_file)
+earnings_data_df.head()
+
+##  Rename the column headers
+earnings_data_df = earnings_data_df.rename(columns={"Annual industry EBITDA movements, 2016-17 to 2018-19": "Industry",
+                                                         "Unnamed: 1": "y_2017",
+                                                          "Unnamed: 2": "y_2018",
+                                                          "Unnamed: 3": "y_2019"})
+earnings_data_df = earnings_data_df.rename(columns={"Industry": "industry"})
+## Clean the data
+earnings_clean_df= earnings_data_df.dropna(how='any')
+earnings_clean_df.set_index("industry", inplace=True)
+earnings_clean_df.head()
+
+
+#removing the "," from data
+earnings_clean_df.y_2017 = earnings_clean_df.y_2017.str.replace(',', '')
+
+earnings_clean_df.head()
+
+
+#earnings_clean_df["y_2017"] = pd.to_numeric(earnings_clean_df["y_2017"])
+
+
+earnings_clean_df.y_2018 = earnings_clean_df.y_2018.str.replace(',', '')
+
+earnings_clean_df.head()
+
+earnings_clean_df.y_2019 = earnings_clean_df.y_2019.str.replace(',', '')
+earnings_clean_df.head()
+
+earnings_clean_df = earnings_clean_df.loc[:, ["y_2017", "y_2018", "y_2019"]]
+earnings_clean_df
+
+
+
+#  create database connection
+connection_string = "postgres:Prav123@localhost:5432/Industry_db"
+engine = create_engine(f'postgresql://{connection_string}')
+
+# Confirm tables
+engine.table_names()
+
+%pip install psycopg2-binary
+
+# load dataframes into database
+industry_clean_df.to_sql(name='industry', con=engine, if_exists='append', index=True)
+
+earnings_clean_df.to_sql(name='earnings', con=engine, if_exists='append', index=True)
+
+
+-- Create Two Tables
+CREATE TABLE industry (
+  industry VARCHAR PRIMARY KEY,
+  y_2017 INT,
+  y_2018 INT,
+  y_2019 INT
+  );
+Drop TABLE industry;
+
+Drop TABLE earnings;
+CREATE TABLE earnings (
+  industry VARCHAR PRIMARY KEY,
+  y_2017 INT,
+  y_2018 INT,
+  y_2019 INT
+ );
+
+
+-- Query to check successful load
+SELECT * FROM industry;
+
+SELECT * FROM earnings;
+
+--- Join tables on Industry
+SELECT industry.industry, industry.y_2017, earnings.y_2017
+FROM industry
+INNER JOIN earnings
+ON industry.industry = earnings.industry;
+
